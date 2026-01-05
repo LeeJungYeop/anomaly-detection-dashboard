@@ -1,1 +1,1 @@
-# internship_proj
+# 2026_Q1_Internship_Project
