@@ -40,7 +40,7 @@
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const preview = document.getElementById('preview');
-    let selectedFile = null; // 선택된 파일을 저장할 변수
+    let selectedFile = null;
 
     // 1. 드래그 앤 드롭 이벤트 처리
     dropZone.addEventListener('dragover', (e) => {
@@ -85,23 +85,24 @@
       reader.readAsDataURL(file);
     }
 
-    // 4. 백엔드로 데이터 전송 (기존 callApi 응용)
-    async function uploadImage() {
+    // 4. 백엔드로 데이터 전송
+    async function uploadImage() {  // uploadImage 함수는 브라우저에 있는 이미지 파일을 서버(백엔드)로 전송
       if (!selectedFile) {
         alert('파일을 먼저 선택해주세요.');
         return;
       }
 
-      const formData = new FormData();
-      formData.append('image', selectedFile);
+      const formData = new FormData(); // 이미지 전송을 위해 설계된 특수 객체, Key-Value 쌍으로 데이터를 저장
+      formData.append('image', selectedFile); // 'image'는 서버가 데이터를 식별할 변수명이고, selectedFile은 파일의 바이너리 데이터
 
       try {
-        const res = await fetch("/api/upload", { // 백엔드 엔드포인트에 맞게 수정
+        const res = await fetch("/api/upload", { // 브라우저는 formData를 multipart/form-data 형식으로 포장하여 서버 주소(/api/upload)로 보냅
+                                                 // 네트워크 전송은 즉시 완료되지 않으므로, 서버로부터 응답 헤더(Response Header)가 도착할 때까지 이 라인에서 코드 실행을 일시 중단
           method: "POST",
           body: formData
         });
-        const data = await res.json();
-        document.getElementById("result").innerText = JSON.stringify(data, null, 2);
+        const data = await res.json(); // 서버가 보낸 텍스트 데이터를 자바스크립트가 읽을 수 있는 객체(Object) 형태로 변환
+        document.getElementById("result").innerText = JSON.stringify(data, null, 2); // 서버가 돌려준 정보(예: 저장된 이미지의 경로, 성공 메시지 등)를 문자열로 바꿈
       } catch (err) {
         console.error("전송 실패:", err);
       }
