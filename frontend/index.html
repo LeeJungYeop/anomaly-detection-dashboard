@@ -2,20 +2,109 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Frontend</title>
+  <title>Frontend - Image Upload</title>
+  <style>
+    #drop-zone {
+      width: 300px;
+      height: 200px;
+      border: 2px dashed #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 20px 0;
+      cursor: pointer;
+    }
+    #drop-zone.highlight {
+      border-color: #007bff;
+      background-color: #f8f9fa;
+    }
+    #preview img {
+      max-width: 300px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello Frontend</h1>
-  <button onclick="callApi()">Call Backend</button>
+  <h1>이미지 업로드 테스트</h1>
 
+  <div id="drop-zone">이미지를 드래그하거나 클릭하여 선택하세요.</div>
+  
+  <input type="file" id="file-input" accept="image/*" style="display: none;">
+
+  <div id="preview"></div>
+
+  <button onclick="uploadImage()">백엔드로 전송</button>
   <pre id="result"></pre>
 
   <script>
-    async function callApi() {
-      const res = await fetch("/api/");
-      const data = await res.json();
-      document.getElementById("result").innerText =
-        JSON.stringify(data, null, 2);
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const preview = document.getElementById('preview');
+    let selectedFile = null; // 선택된 파일을 저장할 변수
+
+    // 1. 드래그 앤 드롭 이벤트 처리
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('highlight');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('highlight');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('highlight');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    });
+
+    // 2. 클릭 시 파일 탐색기 열기
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    // 3. 파일 처리 및 미리보기 함수
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('이미지 파일만 선택 가능합니다.');
+        return;
+      }
+      selectedFile = file;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.innerHTML = `<img src="${e.target.result}" alt="미리보기">`;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 4. 백엔드로 데이터 전송 (기존 callApi 응용)
+    async function uploadImage() {
+      if (!selectedFile) {
+        alert('파일을 먼저 선택해주세요.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+
+      try {
+        const res = await fetch("/api/upload", { // 백엔드 엔드포인트에 맞게 수정
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        document.getElementById("result").innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        console.error("전송 실패:", err);
+      }
     }
   </script>
 </body>
