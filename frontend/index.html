@@ -1,112 +1,645 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
+
 <head>
-  <meta charset="utf-8">
-  <title>Frontend - Image Upload</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Anomaly Detection Hub</title>
+  <!-- Google Fonts for Premium Look -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
-    #drop-zone {
-      width: 300px;
-      height: 200px;
-      border: 2px dashed #ccc;
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --secondary: #4f46e5;
+      --accent: #10b981;
+      --danger: #ef4444;
+      --bg-main: #f9fafb;
+      --card-bg: rgba(255, 255, 255, 0.8);
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .layout {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 2rem;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .layout.analyzed {
+      grid-template-columns: 1fr;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      margin-bottom: 2rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .upload-container {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      min-height: 400px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 20px 0;
       cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      background: #fafafa;
     }
-    #drop-zone.highlight {
-      border-color: #007bff;
-      background-color: #f8f9fa;
+
+    .upload-container:hover {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.05);
     }
-    #preview img {
-      max-width: 300px;
-      margin-top: 10px;
+
+    #result-viewer {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      animation: fadeInUp 0.5s ease;
+    }
+
+    .viewer-panel {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 4 / 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .viewer-panel img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .viewer-label {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      padding: 0.5rem 1rem;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+      z-index: 10;
+    }
+
+    aside {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .status-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .badge {
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .badge-idle {
+      background: var(--bg-main);
+      color: var(--text-muted);
+    }
+
+    .badge-success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent);
+    }
+
+    .badge-danger {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 1rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-light);
+      transform: translateY(-2px);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .select-input {
+      width: 100%;
+      padding: 0.85rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    /* Thumbnail List */
+    #thumbnail-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .thumb-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #000;
+    }
+
+    .thumb-item.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+    }
+
+    .thumb-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.8;
+    }
+
+    .thumb-item:hover img {
+      opacity: 1;
+    }
+
+    .thumb-badge {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 10px;
+      z-index: 5;
+    }
+
+    .thumb-badge.success {
+      background: var(--accent);
+    }
+
+    .thumb-badge.danger {
+      background: var(--danger);
+    }
+
+    .remove-btn {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 4px;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      display: none;
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .thumb-item:hover .remove-btn {
+      display: block;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #toast-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 1000;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      #result-viewer {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
+
 <body>
-  <h1>이미지 업로드 테스트</h1>
 
-  <div id="drop-zone">이미지를 드래그하거나 클릭하여 선택하세요.</div>
-  
-  <input type="file" id="file-input" accept="image/*" style="display: none;">
+  <header class="card"
+    style="background: transparent; border: none; box-shadow: none; backdrop-filter: none; padding: 0 0 1rem 0;">
+    <h1>2026 Q1 Internship Project</h1>
+  </header>
 
-  <div id="preview"></div>
+  <div class="layout" id="main-layout">
+    <main>
+      <!-- 1. 업로드 섹션 (초기 상태) -->
+      <section class="card" id="upload-section">
+        <div class="upload-container" id="drop-zone">
+          <div id="upload-placeholder">
+            <p style="font-size: 4rem; margin-bottom: 1rem;">📁</p>
+            <p style="font-size: 1.1rem; font-weight: 600;">이미지들을 드래그하거나 클릭하여 업로드</p>
+            <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.5rem;">여러 장 선택 가능합니다 (JPG, PNG, WEBP)
+            </p>
+          </div>
+        </div>
+        <div id="thumbnail-list"></div>
+        <input type="file" id="file-input" hidden accept="image/*" multiple>
+      </section>
 
-  <button onclick="uploadImage()">백엔드로 전송</button>
-  <pre id="result"></pre>
+      <!-- 2. 결과 뷰어 섹션 (분석 후 상태) -->
+      <div id="result-viewer">
+        <div
+          style="grid-column: 1/-1; display:flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <h2 id="viewer-status" style="font-size: 1.25rem;">분석 결과 상세</h2>
+          <div id="mini-thumbs" style="display:flex; gap: 0.5rem;"></div>
+        </div>
+        <section class="card">
+          <div class="viewer-panel">
+            <span class="viewer-label">Original Image</span>
+            <img id="res-original" src="" alt="Original">
+          </div>
+        </section>
+        <section class="card">
+          <div class="viewer-panel">
+            <span class="viewer-label">AI Heatmap Overlay</span>
+            <img id="res-heatmap" src="" alt="Heatmap"
+              style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain; z-index: 2;">
+            <img id="res-bg" src="" alt="BG" style="opacity: 0.4;">
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <aside>
+      <section class="card">
+
+        <div class="status-header">
+          <h3 id="result-title">분석 대기</h3>
+          <span class="badge badge-idle" id="status-badge">Ready</span>
+        </div>
+
+        <div id="analysis-info" style="border-top: 1px solid var(--border); padding-top: 1.5rem;">
+          <div id="result-placeholder" style="color: var(--text-muted); text-align: center; padding: 1rem 0;">
+            파일을 선택하면 분석이 가능합니다.
+          </div>
+
+          <div id="result-data" style="display: none;">
+            <div class="form-group">
+              <label class="form-label">최종 판정 결과</label>
+              <div id="res-prediction" style="font-size: 1.75rem; font-weight: 700;">-</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">탐지 신뢰도 (Anomaly Score)</label>
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="flex: 1; height: 12px; background: var(--bg-main); border-radius: 6px; overflow: hidden;">
+                  <div id="res-score-bar"
+                    style="width: 0%; height: 100%; background: var(--primary); transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);">
+                  </div>
+                </div>
+                <span id="res-score-text" style="font-weight: 700; min-width: 50px;">0%</span>
+              </div>
+            </div>
+
+
+          </div>
+        </div>
+
+        <button class="btn-primary" id="start-analysis" style="margin-top: 1rem;" disabled>AI 분석 시작</button>
+        <button class="btn-primary" id="reset-btn"
+          style="margin-top: 1rem; background: var(--text-muted); display: none;">새로 분석하기</button>
+      </section>
+    </aside>
+  </div>
+
+
+  </aside>
+  </div>
+
+  <div id="toast-container"></div>
 
   <script>
+    // 주요 요소 참조
+    const mainLayout = document.getElementById('main-layout');
+    const uploadSection = document.getElementById('upload-section');
+    const resultViewer = document.getElementById('result-viewer');
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
-    const preview = document.getElementById('preview');
-    let selectedFile = null;
+    const uploadPlaceholder = document.getElementById('upload-placeholder');
+    const thumbnailList = document.getElementById('thumbnail-list');
+    const miniThumbs = document.getElementById('mini-thumbs');
+    const startBtn = document.getElementById('start-analysis');
+    const resetBtn = document.getElementById('reset-btn');
+    const statusBadge = document.getElementById('status-badge');
+    const resultTitle = document.getElementById('result-title');
+    const resultPlaceholder = document.getElementById('result-placeholder');
+    const resultData = document.getElementById('result-data');
 
-    // 1. 드래그 앤 드롭 이벤트 처리
-    dropZone.addEventListener('dragover', (e) => {
+    // 결과 필드 참조
+    const resOriginal = document.getElementById('res-original');
+    const resHeatmap = document.getElementById('res-heatmap');
+    const resBg = document.getElementById('res-bg');
+    const resPrediction = document.getElementById('res-prediction');
+    const resScoreBar = document.getElementById('res-score-bar');
+    const resScoreText = document.getElementById('res-score-text');
+
+    let fileList = [];
+    let currentIndex = 0;
+
+    // 1. 업로드 로직
+    dropZone.onclick = () => fileInput.click();
+
+    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; };
+    dropZone.ondragleave = () => { dropZone.style.borderColor = 'var(--border)'; };
+    dropZone.ondrop = (e) => {
       e.preventDefault();
-      dropZone.classList.add('highlight');
-    });
+      dropZone.style.borderColor = 'var(--border)';
+      handleFiles(e.dataTransfer.files);
+    };
 
-    dropZone.addEventListener('dragleave', () => {
-      dropZone.classList.remove('highlight');
-    });
+    fileInput.onchange = (e) => { handleFiles(e.target.files); };
 
-    dropZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('highlight');
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        handleFile(files[0]);
+    function handleFiles(files) {
+      const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      if (validFiles.length < files.length) {
+        showToast('이미지 파일만 업로드 가능합니다.', 'danger');
       }
-    });
 
-    // 2. 클릭 시 파일 탐색기 열기
-    dropZone.addEventListener('click', () => fileInput.click());
-
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files.length > 0) {
-        handleFile(e.target.files[0]);
-      }
-    });
-
-    // 3. 파일 처리 및 미리보기 함수
-    function handleFile(file) {
-      if (!file.type.startsWith('image/')) {
-        alert('이미지 파일만 선택 가능합니다.');
-        return;
-      }
-      selectedFile = file;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        preview.innerHTML = `<img src="${e.target.result}" alt="미리보기">`;
-      };
-      reader.readAsDataURL(file);
+      validFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const fileObj = {
+            id: Date.now() + Math.random(),
+            file: file,
+            preview: e.target.result,
+            analyzed: false,
+            result: null
+          };
+          fileList.push(fileObj);
+          renderThumbnails();
+          checkReady();
+        };
+        reader.readAsDataURL(file);
+      });
     }
 
-    // 4. 백엔드로 데이터 전송
-    async function uploadImage() {  // uploadImage 함수는 브라우저에 있는 이미지 파일을 서버(백엔드)로 전송
-      if (!selectedFile) {
-        alert('파일을 먼저 선택해주세요.');
-        return;
+    function renderThumbnails() {
+      thumbnailList.innerHTML = fileList.map((item, idx) => `
+        <div class="thumb-item">
+          <button class="remove-btn" onclick="removeFile(event, ${idx})">×</button>
+          <img src="${item.preview}">
+          ${item.analyzed ? `<span class="thumb-badge ${item.result.isDefect ? 'danger' : 'success'}">${item.result.isDefect ? 'D' : 'N'}</span>` : ''}
+        </div>
+      `).join('');
+
+      uploadPlaceholder.style.display = fileList.length ? 'none' : 'block';
+    }
+
+    window.removeFile = (e, idx) => {
+      e.stopPropagation();
+      fileList.splice(idx, 1);
+      renderThumbnails();
+      checkReady();
+    };
+
+    function checkReady() {
+      startBtn.disabled = fileList.length === 0;
+    }
+
+    // 2. 일괄 분석 시작
+    startBtn.onclick = async () => {
+      if (!fileList.length) return;
+
+      startBtn.disabled = true;
+      startBtn.innerText = '일괄 분석 중...';
+
+      for (let i = 0; i < fileList.length; i++) {
+        const item = fileList[i];
+        statusBadge.innerText = `Analyzing (${i + 1}/${fileList.length})`;
+
+        // 분석 시뮬레이션
+        await new Promise(r => setTimeout(r, 800));
+
+        const isDefect = Math.random() > 0.5;
+        item.analyzed = true;
+        item.result = {
+          isDefect: isDefect,
+          score: isDefect ? (80 + Math.random() * 20).toFixed(1) : (5 + Math.random() * 15).toFixed(1)
+        };
+        renderThumbnails();
       }
 
-      const formData = new FormData(); // 이미지 전송을 위해 설계된 특수 객체, Key-Value 쌍으로 데이터를 저장
-      formData.append('image', selectedFile); // 'image'는 서버가 데이터를 식별할 변수명이고, selectedFile은 파일의 바이너리 데이터
+      showToast('모든 이미지 분석이 완료되었습니다.', 'success');
+      showResults();
+    };
 
-      try {
-        const res = await fetch("/api/upload", { // 브라우저는 formData를 multipart/form-data 형식으로 포장하여 서버 주소(/api/upload)로 보냅
-                                                 // 네트워크 전송은 즉시 완료되지 않으므로, 서버로부터 응답 헤더(Response Header)가 도착할 때까지 이 라인에서 코드 실행을 일시 중단
-          method: "POST",
-          body: formData
-        });
-        const data = await res.json(); // 서버가 보낸 텍스트 데이터를 자바스크립트가 읽을 수 있는 객체(Object) 형태로 변환
-        document.getElementById("result").innerText = JSON.stringify(data, null, 2); // 서버가 돌려준 정보(예: 저장된 이미지의 경로, 성공 메시지 등)를 문자열로 바꿈
-      } catch (err) {
-        console.error("전송 실패:", err);
-      }
+    function showResults() {
+      uploadSection.style.display = 'none';
+      resultViewer.style.display = 'grid';
+      mainLayout.classList.add('analyzed');
+
+      // 결과 리스트 내비게이션 생성
+      miniThumbs.innerHTML = fileList.map((item, idx) => `
+        <div class="thumb-item ${idx === 0 ? 'active' : ''}" style="width: 50px; height: 50px;" onclick="switchResult(${idx})">
+          <img src="${item.preview}">
+          <span class="thumb-badge ${item.result.isDefect ? 'danger' : 'success'}" style="width:12px; height:12px; font-size:8px;"></span>
+        </div>
+      `).join('');
+
+      switchResult(0);
+
+      resultPlaceholder.style.display = 'none';
+      resultData.style.display = 'block';
+      startBtn.style.display = 'none';
+      resetBtn.style.display = 'block';
+      resultTitle.innerText = '일괄 분석 완료';
+    }
+
+    window.switchResult = (idx) => {
+      currentIndex = idx;
+      const item = fileList[idx];
+      const res = item.result;
+
+      // 미니 썸네일 활성화 표시
+      Array.from(miniThumbs.children).forEach((el, i) => {
+        el.classList.toggle('active', i === idx);
+      });
+
+      // 데이터 바인딩
+      resOriginal.src = item.preview;
+      resBg.src = item.preview;
+      resHeatmap.src = item.preview;
+      resHeatmap.style.filter = res.isDefect ? 'hue-rotate(300deg) saturate(3) contrast(1.5)' : 'none';
+      resHeatmap.style.opacity = '0.7';
+
+      resPrediction.innerText = res.isDefect ? 'DEFECT (불량)' : 'NORMAL (정상)';
+      resPrediction.style.color = res.isDefect ? 'var(--danger)' : 'var(--accent)';
+      resScoreBar.style.width = `${res.score}%`;
+      resScoreBar.style.background = res.isDefect ? 'var(--danger)' : 'var(--accent)';
+      resScoreText.innerText = `${res.score}%`;
+
+      statusBadge.innerText = res.isDefect ? 'Defect' : 'Clear';
+      statusBadge.className = res.isDefect ? 'badge badge-danger' : 'badge badge-success';
+
+      showToast(`${idx + 1}번 이미지 결과로 전환되었습니다.`, 'info');
+    };
+
+    // 초기화
+    resetBtn.onclick = () => {
+      fileList = [];
+      renderThumbnails();
+
+      uploadSection.style.display = 'block';
+      resultViewer.style.display = 'none';
+      mainLayout.classList.remove('analyzed');
+
+      resultPlaceholder.style.display = 'block';
+      resultData.style.display = 'none';
+
+      startBtn.disabled = true;
+      startBtn.style.display = 'block';
+      startBtn.innerText = 'AI 분석 시작';
+      resetBtn.style.display = 'none';
+
+      statusBadge.innerText = 'Ready';
+      statusBadge.className = 'badge badge-idle';
+      resultTitle.innerText = '분석 대기';
+    };
+
+    // 알림 시스템 구현
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `badge badge-${type}`;
+      toast.style.padding = '1rem 1.5rem';
+      toast.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
+      toast.style.animation = 'fadeInUp 0.3s ease';
+      toast.innerText = message;
+      document.getElementById('toast-container').appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
     }
   </script>
 </body>
+
 </html>
