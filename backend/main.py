@@ -1,12 +1,14 @@
 from fastapi import FastAPI, File, UploadFile, Form
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import os
-import random
+import httpx
+import shutil
 
 app = FastAPI(
     title="Internship Project API",
     description="Backend API for AI Anomaly Detection",
-    version="1.0.0"
+    version="1.1.0"
 )
 
 # 이미지가 저장될 디렉토리 설정
@@ -15,42 +17,77 @@ UPLOAD_DIR = os.path.join(os.getcwd(), "uploads")
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
-class UploadResponse(BaseModel):
+# 정적 파일(이미지) 서빙 설정
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+# AI Model 서비스 URL
+AI_MODEL_URL = "http://ai-model:5000/predict"
+
+class PredictRequest(BaseModel):
+    filename: str
+    model_name: str
+
+class PredictResponse(BaseModel):
     is_defect: bool
     anomaly_score: float
     heatmap_url: str
     message: str
     filename: str
 
-
+class UploadResponse(BaseModel):
+    filename: str
+    message: str
 
 @app.post("/api/upload", response_model=UploadResponse, tags=["Upload"])
-async def upload_image(
-    image: UploadFile = File(...),
-    model_name: str = Form(...)
-):
+async def upload_image(image: UploadFile = File(...)):
     """
-    이미지를 업로드하고 AI 분석 결과를 반환합니다.
-    - **image**: 업로드할 이미지 파일
-    - **model_name**: 프론트엔드에서 선택한 AI 모델 이름
+    1. 파일을 서버에 업로드만 수행합니다.
     """
-    # 파일 내용 읽기
     content = await image.read()
-    
-    # 서버 로컬에 파일 저장
     file_path = os.path.join(UPLOAD_DIR, image.filename)
+    
     with open(file_path, "wb") as f:
         f.write(content)
+        
+    return {
+        "filename": image.filename,
+        "message": "파일 업로드 완료"
+    }
 
-    # 분석결과 시뮬레이션 (실제 구현 시에는 AI 모델 추론 로직이 들어감)
-    is_defect = random.random() > 0.5
-    anomaly_score = round(random.uniform(80.0, 99.9), 1) if is_defect else round(random.uniform(1.0, 20.0), 1)
+@app.post("/api/predict", response_model=PredictResponse, tags=["AI"])
+async def predict_image(request: PredictRequest):
+    """
+    2. 업로드된 파일명을 바탕으로 AI 분석을 수행합니다.
+    """
+    file_path = os.path.join(UPLOAD_DIR, request.filename)
+    
+    if not os.path.exists(file_path):
+        return {"error": "파일을 찾을 수 없습니다."}
+
+    # AI Model 컨테이너로 추론 요청
+    async with httpx.AsyncClient() as client:
+        with open(file_path, "rb") as f:
+            files = {"file": (request.filename, f)}
+            response = await client.post(AI_MODEL_URL, files=files)
+            ai_results = response.json()
+
+    # AI 결과 추출
+    is_defect = ai_results.get("is_defect", False)
+    anomaly_score = ai_results.get("anomaly_score", 0.0)
+    
+    # 히트맵 파일 생성 시뮬레이션 (원본 파일을 복사하여 heatmap_ 파일 생성)
+    heatmap_filename = f"heatmap_{request.filename}"
+    heatmap_path = os.path.join(UPLOAD_DIR, heatmap_filename)
+    
+    # 실제 AI라면 여기서 heatmap_data를 기반으로 이미지를 생성하겠지만, 
+    # 지금은 파일이 존재하게끔 원본을 복사합니다.
+    shutil.copy(file_path, heatmap_path)
     
     # 응답 데이터 구성
     return {
         "is_defect": is_defect,
         "anomaly_score": anomaly_score,
-        "heatmap_url": f"/uploads/heatmap_{image.filename}",
-        "message": f"{model_name} 모델을 이용한 분석이 완료되었습니다.",
-        "filename": image.filename
+        "heatmap_url": f"/uploads/{heatmap_filename}",
+        "message": f"{request.model_name} 모델 분석 완료",
+        "filename": request.filename
     }

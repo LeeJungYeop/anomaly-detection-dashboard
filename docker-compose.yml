@@ -18,3 +18,10 @@ services:
     build: ./backend
     expose:
       - "8000"
+    depends_on:
+      - ai-model
+
+  ai-model:
+    build: ./ai-model
+    expose:
+      - "5000"

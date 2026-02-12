@@ -478,25 +478,27 @@
 
     function handleFiles(files) {
       const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      // Array.from(files) -> 배열로 변환, filter(f => f.type.startsWith('image/')) -> 이미지 파일만 필터링 
       if (validFiles.length < files.length) {
+        // validFiles.length < files.length -> 이미지 파일이 아닌 파일이 포함되어 있음
         showToast('이미지 파일만 업로드 가능합니다.', 'danger');
       }
-
       validFiles.forEach(file => {
         const reader = new FileReader();
         reader.onload = (e) => {
+          // reader.onload -> 파일을 읽으면 실행됨
           const fileObj = {
-            id: Date.now() + Math.random(),
-            file: file,
-            preview: e.target.result,
-            analyzed: false,
-            result: null
+            id: Date.now() + Math.random(), // id: 파일의 고유한 ID
+            file: file, // file: 파일
+            preview: e.target.result, // preview: 파일의 미리보기
+            analyzed: false, // analyzed: 파일이 분석되었는지
+            result: null // result: 파일의 분석 결과
           };
-          fileList.push(fileObj);
-          renderThumbnails();
-          checkReady();
+          fileList.push(fileObj); // fileList에 파일 추가
+          renderThumbnails(); // 썸네일 렌더링
+          checkReady(); // 분석 시작 버튼 활성화 확인
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(file); // 파일을 Data URL로 읽음
       });
     }
 
@@ -523,30 +525,60 @@
       startBtn.disabled = fileList.length === 0;
     }
 
-    // 2. 일괄 분석 시작
+    // 2. 통합 분석 흐름
     startBtn.onclick = async () => {
       if (!fileList.length) return;
 
       startBtn.disabled = true;
-      startBtn.innerText = '일괄 분석 중...';
+      startBtn.innerText = '고성능 분석 진행 중...';
 
       for (let i = 0; i < fileList.length; i++) {
         const item = fileList[i];
         statusBadge.innerText = `Analyzing (${i + 1}/${fileList.length})`;
 
-        // 분석 시뮬레이션
-        await new Promise(r => setTimeout(r, 800));
+        // 1단계: 파일 업로드 (/api/upload)
+        const uploadFormData = new FormData();
+        uploadFormData.append('image', item.file);
 
-        const isDefect = Math.random() > 0.5;
-        item.analyzed = true;
-        item.result = {
-          isDefect: isDefect,
-          score: isDefect ? (80 + Math.random() * 20).toFixed(1) : (5 + Math.random() * 15).toFixed(1)
-        };
+        try {
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: uploadFormData
+          });
+
+          if (!uploadResponse.ok) throw new Error('Upload failed');
+          const uploadData = await uploadResponse.json();
+          const serverFilename = uploadData.filename;
+
+          // 2단계: 분석 요청 (/api/predict)
+          const predictResponse = await fetch('/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename: serverFilename,
+              model_name: 'Premium-Duct-AI'
+            })
+          });
+
+          if (!predictResponse.ok) throw new Error('Prediction failed');
+          const predictData = await predictResponse.json();
+
+          item.analyzed = true;
+          item.result = {
+            isDefect: predictData.is_defect,
+            score: (predictData.anomaly_score || 0).toFixed(1),
+            heatmap: predictData.heatmap_url
+          };
+        } catch (error) {
+          console.error('Flow failed:', error);
+          showToast(`분석 오류: ${item.file.name}`, 'danger');
+          item.analyzed = true;
+          item.result = { isDefect: false, score: "0.0" };
+        }
         renderThumbnails();
       }
 
-      showToast('모든 이미지 분석이 완료되었습니다.', 'success');
+      showToast('모든 정밀 분석이 완료되었습니다.', 'success');
       showResults();
     };
 
@@ -569,7 +601,7 @@
       resultData.style.display = 'block';
       startBtn.style.display = 'none';
       resetBtn.style.display = 'block';
-      resultTitle.innerText = '일괄 분석 완료';
+      resultTitle.innerText = '정밀 분석 완료';
     }
 
     window.switchResult = (idx) => {
@@ -585,9 +617,18 @@
       // 데이터 바인딩
       resOriginal.src = item.preview;
       resBg.src = item.preview;
-      resHeatmap.src = item.preview;
-      resHeatmap.style.filter = res.isDefect ? 'hue-rotate(300deg) saturate(3) contrast(1.5)' : 'none';
-      resHeatmap.style.opacity = '0.7';
+
+      // 서버에서 온 히트맵 URL이 있으면 사용, 없으면 원본 이미지 사용
+      resHeatmap.src = res.heatmap || item.preview;
+
+      // 실제 히트맵이 없을 경우에만 시뮬레이션용 필터 적용
+      if (!res.heatmap || res.heatmap.includes('heatmap_')) {
+        resHeatmap.style.filter = res.isDefect ? 'hue-rotate(300deg) saturate(3) contrast(1.5)' : 'none';
+        resHeatmap.style.opacity = '0.7';
+      } else {
+        resHeatmap.style.filter = 'none';
+        resHeatmap.style.opacity = '1';
+      }
 
       resPrediction.innerText = res.isDefect ? 'DEFECT (불량)' : 'NORMAL (정상)';
       resPrediction.style.color = res.isDefect ? 'var(--danger)' : 'var(--accent)';
