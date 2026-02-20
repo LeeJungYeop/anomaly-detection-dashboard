@@ -1,0 +1,19 @@
+127.0.0.1 - - [19/Feb/2026 18:26:33] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Feb/2026 18:26:34] code 404, message File not found
+127.0.0.1 - - [19/Feb/2026 18:26:34] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [19/Feb/2026 18:28:56] code 501, message Unsupported method ('POST')
+127.0.0.1 - - [19/Feb/2026 18:28:56] "POST /api/upload HTTP/1.1" 501 -
+127.0.0.1 - - [19/Feb/2026 18:29:10] code 501, message Unsupported method ('POST')
+127.0.0.1 - - [19/Feb/2026 18:29:10] "POST /api/upload HTTP/1.1" 501 -
+127.0.0.1 - - [19/Feb/2026 18:29:19] code 501, message Unsupported method ('POST')
+127.0.0.1 - - [19/Feb/2026 18:29:19] "POST /api/upload HTTP/1.1" 501 -
+127.0.0.1 - - [19/Feb/2026 18:29:20] code 501, message Unsupported method ('POST')
+127.0.0.1 - - [19/Feb/2026 18:29:20] "POST /api/upload HTTP/1.1" 501 -
+127.0.0.1 - - [19/Feb/2026 18:29:21] code 501, message Unsupported method ('POST')
+127.0.0.1 - - [19/Feb/2026 18:29:21] "POST /api/upload HTTP/1.1" 501 -
+127.0.0.1 - - [19/Feb/2026 18:29:21] code 501, message Unsupported method ('POST')
+127.0.0.1 - - [19/Feb/2026 18:29:21] "POST /api/upload HTTP/1.1" 501 -
+127.0.0.1 - - [19/Feb/2026 18:29:22] code 501, message Unsupported method ('POST')
+127.0.0.1 - - [19/Feb/2026 18:29:22] "POST /api/upload HTTP/1.1" 501 -
+127.0.0.1 - - [19/Feb/2026 18:29:22] code 501, message Unsupported method ('POST')
+127.0.0.1 - - [19/Feb/2026 18:29:22] "POST /api/upload HTTP/1.1" 501 -
