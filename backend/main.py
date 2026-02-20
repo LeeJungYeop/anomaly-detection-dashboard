@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import os
 import httpx
 import shutil
+import base64
 
 app = FastAPI(
     title="Internship Project API",
@@ -74,15 +75,19 @@ async def predict_image(request: PredictRequest):
     # AI 결과 추출
     is_defect = ai_results.get("is_defect", False)
     anomaly_score = ai_results.get("anomaly_score", 0.0)
-    
-    # 히트맵 파일 생성 시뮬레이션 (원본 파일을 복사하여 heatmap_ 파일 생성)
+    heatmap_data = ai_results.get("heatmap_data", "")
+
+    # 히트맵 파일 생성 (ai-model에서 받은 base64 데이터를 이미지로 저장)
     heatmap_filename = f"heatmap_{request.filename}"
     heatmap_path = os.path.join(UPLOAD_DIR, heatmap_filename)
-    
-    # 실제 AI라면 여기서 heatmap_data를 기반으로 이미지를 생성하겠지만, 
-    # 지금은 파일이 존재하게끔 원본을 복사합니다.
-    shutil.copy(file_path, heatmap_path)
-    
+
+    if heatmap_data:
+        heatmap_bytes = base64.b64decode(heatmap_data)
+        with open(heatmap_path, "wb") as f:
+            f.write(heatmap_bytes)
+    else:
+        shutil.copy(file_path, heatmap_path)
+
     # 응답 데이터 구성
     return {
         "is_defect": is_defect,
