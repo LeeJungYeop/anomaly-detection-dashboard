@@ -1,0 +1,14 @@
+# Model weights
+*.pth
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Env
+.env
+.env.*
+
+# Runtime uploads
+backend/uploads/
