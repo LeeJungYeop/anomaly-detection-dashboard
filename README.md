@@ -6,7 +6,7 @@
 
 ## 아키텍처
 
-<img width="681" height="260" alt="Image" src="https://github.com/user-attachments/assets/d2727fad-7fc5-4ef5-a776-a31785e8af98" />
+<!-- <img width="681" height="260" alt="Image" src="https://github.com/user-attachments/assets/d2727fad-7fc5-4ef5-a776-a31785e8af98" /> -->
 
 ```
 Browser
